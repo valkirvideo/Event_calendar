@@ -1480,7 +1480,7 @@ function updateAdminUI() {
   } else if (userRole === "client") {
     adminActionBtn.textContent = "Project D (только просмотр)";
   } else {
-    adminActionBtn.textContent = "Вход в админку";
+    adminActionBtn.textContent = "Вход";
   }
 
   // здесь же прячем/показываем кнопку Project D
@@ -1986,6 +1986,7 @@ loadEventsFromSheet();
     const sampleRect = dayCells[0].getBoundingClientRect();
     const cellWidth  = sampleRect.width;
     const cellHeight = sampleRect.height;
+    const compactMoreLabel = cellWidth < 80; // порог можно подстроить
 
     const BASE_CELL_HEIGHT = calendarBaseRowHeight;
     const factor = Math.max(1, cellHeight / BASE_CELL_HEIGHT);
@@ -2088,14 +2089,17 @@ loadEventsFromSheet();
       const hiddenCount  = Math.max(0, eventsForDay.length - visibleSet.size);
 
       if (hiddenCount > 0){
-        const more = document.createElement("div");
-        more.className = "day-more-indicator";
-        more.textContent = `+ ещё ${hiddenCount}`;
+  const more = document.createElement("div");
+  more.className = "day-more-indicator";
+  // короткий вариант на узких ячейках: "+2"
+  more.textContent = compactMoreLabel
+    ? `+${hiddenCount}`
+    : `+ ещё ${hiddenCount}`;
 
-        const headerRow = cell.querySelector(".day-number-row");
-        if (headerRow) headerRow.appendChild(more);
-        else cell.appendChild(more);
-      }
+  const headerRow = cell.querySelector(".day-number-row");
+  if (headerRow) headerRow.appendChild(more);
+  else cell.appendChild(more);
+}
 
       cell.onclick = () => {
         if (!eventsForDay.length) {
