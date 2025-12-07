@@ -2169,31 +2169,30 @@ loadEventsFromSheet();
       const monthEl = document.createElement("div");
       monthEl.className = "gantt-header-day-month";
 
-      if (isYearMode) {
-        const day = d.getDate();
+        if (isYearMode) {
+    const day = d.getDate();
 
-        if (denseYearDays) {
-          // Сильный зум: число на каждый день, месяц только на первое число
-          num.textContent = String(day);
-          if (day === 1) monthEl.textContent = monthShort;
-        } else {
-          // Отдалённый вид: числа по неделям, месяц только на первое число
-          if (day === 1 || dow === 1) {
-            // понедельники + всегда 1-е
-            num.textContent = String(day);
-          } else {
-            num.textContent = "";
-          }
-
-          if (day === 1) {
-            monthEl.textContent = monthShort;
-          }
-        }
+    if (denseYearDays) {
+      // Сильный зум: число на каждый день, месяц только на первое число
+      num.textContent = String(day);
+      if (day === 1) monthEl.textContent = monthShort;
+    } else {
+      // Мелкий зум:
+      // 1-е — только название месяца,
+      // числа показываем каждые 7 дней: 7, 14, 21, 28...
+      if (day === 1) {
+        num.textContent = "";                // «1» не пишем
+        monthEl.textContent = monthShort;    // только месяц
+      } else if (day % 7 === 0) {
+        num.textContent = String(day);       // 7,14,21,28...
       } else {
-        // Режим "месяц": только числа, без подписи месяца
-        num.textContent = String(d.getDate());
-        // monthEl намеренно оставляем пустым
+        num.textContent = "";                // остальные дни без подписи
       }
+    }
+  } else {
+    // Режим "месяц": только числа, без названий месяцев
+    num.textContent = String(d.getDate());
+  }
 
       dayEl.appendChild(num);
 
