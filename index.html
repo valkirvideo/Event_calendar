@@ -2154,58 +2154,55 @@ loadEventsFromSheet();
     });
 
     ganttDays.forEach((d) => {
-  const dayEl = document.createElement("div");
-  dayEl.className = "gantt-header-day";
-  if (sameDate(d, today)) dayEl.classList.add("is-today");
+      const dayEl = document.createElement("div");
+      dayEl.className = "gantt-header-day";
+      if (sameDate(d, today)) dayEl.classList.add("is-today");
 
-  const dow = d.getDay();
-  // Подсвечиваем выходные ТОЛЬКО там, где вообще есть подписи
-  if ((dow === 0 || dow === 6) && (!isYearMode || showDenseDays)) {
-    dayEl.classList.add("weekend");
-  }
-
-  const day = d.getDate();
-  const monthShort = d.toLocaleDateString("ru-RU", { month: "short" });
-
-  const numEl = document.createElement("div");
-  numEl.className = "gantt-header-day-number";
-
-  const monthEl = document.createElement("div");
-  monthEl.className = "gantt-header-day-month";
-
-  if (!isYearMode) {
-    // РЕЖИМ "МЕСЯЦ" ДЛЯ ГАНТА:
-    // показываем только числа, БЕЗ подписи месяца (она уже есть сверху).
-    numEl.textContent = String(day);
-    dayEl.appendChild(numEl);
-  } else {
-    // РЕЖИМ "ГОД"
-    if (showDenseDays) {
-      // Большой зум: число на каждый день, месяц только под 1-м числом.
-      numEl.textContent = String(day);
-      dayEl.appendChild(numEl);
-
-      if (day === 1) {
-        monthEl.textContent = monthShort;
-        dayEl.appendChild(monthEl);
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) {
+        dayEl.classList.add("weekend");
       }
+
+      const num = document.createElement("div");
+      num.className = "gantt-header-day-number";
+      const monthShort = d.toLocaleDateString("ru-RU", { month: "short" });
+      const monthEl = document.createElement("div");
+      monthEl.className = "gantt-header-day-month";
+
+        if (isYearMode) {
+    const day = d.getDate();
+
+    if (denseYearDays) {
+      // Сильный зум: число на каждый день, месяц только на первое число
+      num.textContent = String(day);
+      if (day === 1) monthEl.textContent = monthShort;
     } else {
-      // Маленький зум:
-      // — на 1-е число ПИШЕМ ТОЛЬКО месяц (без числа)
-      // — ещё рисуем числа для 7, 14, 21, 28
+      // Мелкий зум:
+      // 1-е — только название месяца,
+      // числа показываем каждые 7 дней: 7, 14, 21, 28...
       if (day === 1) {
-        monthEl.textContent = monthShort;
-        dayEl.appendChild(monthEl);
-      } else if (day === 7 || day === 14 || day === 21 || day === 28) {
-        numEl.textContent = String(day);
-        dayEl.appendChild(numEl);
+        num.textContent = "";                // «1» не пишем
+        monthEl.textContent = monthShort;    // только месяц
+      } else if (day % 7 === 0) {
+        num.textContent = String(day);       // 7,14,21,28...
+      } else {
+        num.textContent = "";                // остальные дни без подписи
       }
-      // остальные дни остаются пустыми
     }
+  } else {
+    // Режим "месяц": только числа, без названий месяцев
+    num.textContent = String(d.getDate());
   }
 
-  ganttHeaderRowEl.appendChild(dayEl);
-});
+      dayEl.appendChild(num);
+
+      // Если есть текст месяца — добавляем, и в годовом, и в месячном режиме
+      if (monthEl.textContent) {
+        dayEl.appendChild(monthEl);
+      }
+
+      ganttHeaderRowEl.appendChild(dayEl);
+    });
 
     const visibleEvents = eventsFromTable
       .filter(ev => {
