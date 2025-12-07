@@ -1174,6 +1174,11 @@ const API_URL = "https://event-calendar-api.valkirvideo.workers.dev/api";
   function getMonday(d){const r=new Date(d);const day=r.getDay();const diff=(day+6)%7;r.setDate(r.getDate()-diff);return r;}
   function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d;}
 
+  function isMobileViewport() {
+  // можно 640 или 768, как тебе удобнее считать "мобилой"
+  return window.innerWidth <= 768;
+  }
+
   function formatRuRange(start,end){
     const sameMonth=start.getMonth()===end.getMonth()&&start.getFullYear()===end.getFullYear();
     if(sameMonth){
@@ -2169,23 +2174,38 @@ loadEventsFromSheet();
           num.textContent = String(d.getDate());
           if (d.getDate() === 1) monthEl.textContent = monthShort;
         } else {
-          const day = d.getDate();
-          if (day === 1) {
-            num.textContent = monthShort;
-          } else if ([7, 14, 21, 28].includes(day)) {
-            num.textContent = String(day);
-          } else {
-            num.textContent = "";
-          }
-        }
+    const day = d.getDate();
+
+    if (!isMobileViewport()) {
+      // 💻 Десктоп — всё как было: каждый день подписан
+      num.textContent = String(day);
+      monthEl.textContent = monthShort;
+    } else {
+      // 📱 Мобильный месяц: подписываем не каждый день
+      // Например: 1, 5, 10, 15, 20, 25, 30
+      if (day === 1 || day === 5 || day === 10 || day === 15 ||
+          day === 20 || day === 25 || day === 30) {
+        num.textContent = String(day);
+      } else {
+        num.textContent = "";
+      }
+
+      // Месяц пишем только на 1-м
+      monthEl.textContent = day === 1 ? monthShort : "";
+    }
+  }
       } else {
         num.textContent = String(d.getDate());
         monthEl.textContent = monthShort;
       }
 
       dayEl.appendChild(num);
+
+      // тут как раз "остальное (добавление monthEl)"
       if (!isYearMode || showDenseDays) {
-        if (monthEl.textContent) dayEl.appendChild(monthEl);
+        if (monthEl.textContent) {
+          dayEl.appendChild(monthEl);
+        }
       }
 
       ganttHeaderRowEl.appendChild(dayEl);
@@ -2540,22 +2560,35 @@ loadEventsFromSheet();
   });
 
   function fitGanttMonthToViewport() {
-    if (currentView !== "gantt" || ganttRangeMode !== "month") return;
+  if (currentView !== "gantt" || ganttRangeMode !== "month") return;
 
-    const totalWidth = ganttScrollEl.clientWidth || 0;
-    const sidebarWidth = getSidebarWidthPx();
-    const viewportForDays = Math.max(0, totalWidth - sidebarWidth);
+  const firstForGantt = new Date(currentYear, currentMonth, 1);
+  const lastForGantt  = new Date(currentYear, currentMonth + 1, 0);
 
-    if (!viewportForDays || !currentGanttDaysCount) return;
-
-    ganttDayWidth = viewportForDays / currentGanttDaysCount;
+  // 📱 Мобильный режим: фиксированная ширина дня + скролл
+  if (isMobileViewport()) {
+    ganttDayWidth = 26; // или 24 — подбери по вкусу
     applyGanttDayWidth();
-
-    const firstForGantt = new Date(currentYear, currentMonth, 1);
-    const lastForGantt  = new Date(currentYear, currentMonth + 1, 0);
     renderGantt(firstForGantt, lastForGantt);
+    return;
   }
 
+  // 💻 Десктоп: как было, подгоняем месяц под ширину
+  const totalWidth = ganttScrollEl.clientWidth || 0;
+  const sidebarWidth = getSidebarWidthPx();
+  const viewportForDays = Math.max(0, totalWidth - sidebarWidth);
+
+  if (!viewportForDays || !currentGanttDaysCount) {
+    ganttDayWidth = 26;
+    applyGanttDayWidth();
+    renderGantt(firstForGantt, lastForGantt);
+    return;
+  }
+
+  ganttDayWidth = viewportForDays / currentGanttDaysCount;
+  applyGanttDayWidth();
+  renderGantt(firstForGantt, lastForGantt);
+}
   document.getElementById("viewCalendarBtn").addEventListener("click",()=>{
     currentView="calendar";
     renderCalendar();
