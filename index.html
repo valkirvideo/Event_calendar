@@ -2144,8 +2144,8 @@ loadEventsFromSheet();
     const templateCols = `repeat(${daysCount}, var(--gantt-day-width))`;
     ganttHeaderRowEl.style.gridTemplateColumns = templateCols;
 
-    const isYearMode = ganttRangeMode === "year";
-    const showDenseDays = isYearMode && ganttDayWidth >= 22;
+        const isYearMode = ganttRangeMode === "year";
+    const denseYearDays = isYearMode && ganttDayWidth >= 22; // "сильный зум"
 
     const weekendIndices = [];
     ganttDays.forEach((d, idx) => {
@@ -2154,61 +2154,56 @@ loadEventsFromSheet();
     });
 
     ganttDays.forEach((d) => {
-  const dayEl = document.createElement("div");
-  dayEl.className = "gantt-header-day";
-  if (sameDate(d, today)) dayEl.classList.add("is-today");
+      const dayEl = document.createElement("div");
+      dayEl.className = "gantt-header-day";
+      if (sameDate(d, today)) dayEl.classList.add("is-today");
 
-  const dow = d.getDay();
-  if ((dow === 0 || dow === 6) && (!isYearMode || showDenseDays)) {
-    dayEl.classList.add("weekend");
-  }
-
-  const num = document.createElement("div");
-  num.className = "gantt-header-day-number";
-  const monthShort = d.toLocaleDateString("ru-RU", { month: "short" });
-  const monthEl = document.createElement("div");
-  monthEl.className = "gantt-header-day-month";
-
-  if (isYearMode) {
-    // годовой режим (как мы делали до этого)
-    if (showDenseDays) {
-      num.textContent = String(d.getDate());
-      if (d.getDate() === 1) monthEl.textContent = monthShort;
-    } else {
-      const day = d.getDate();
-      if (!isMobileViewport()) {
-        num.textContent = String(day);
-        monthEl.textContent = monthShort;
-      } else {
-        if (day === 1 || day === 5 || day === 10 || day === 15 ||
-            day === 20 || day === 25 || day === 30) {
-          num.textContent = String(day);
-        } else {
-          num.textContent = "";
-        }
-        monthEl.textContent = day === 1 ? monthShort : "";
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) {
+        dayEl.classList.add("weekend");
       }
-    }
-  } else {
-    // 🔹 МЕСЯЧНЫЙ режим
-    num.textContent = String(d.getDate());
-    // на мобиле месяц под каждым числом НЕ дублируем
-    if (!isMobileViewport()) {
-      monthEl.textContent = monthShort;
-    }
-  }
 
-  dayEl.appendChild(num);
+      const num = document.createElement("div");
+      num.className = "gantt-header-day-number";
+      const monthShort = d.toLocaleDateString("ru-RU", { month: "short" });
+      const monthEl = document.createElement("div");
+      monthEl.className = "gantt-header-day-month";
 
-  // добавляем подпись месяца только там, где она реально нужна
-  if (!isYearMode || showDenseDays) {
-    if (monthEl.textContent) {
-      dayEl.appendChild(monthEl);
-    }
-  }
+      if (isYearMode) {
+        const day = d.getDate();
 
-  ganttHeaderRowEl.appendChild(dayEl);
-});
+        if (denseYearDays) {
+          // Сильный зум: число на каждый день, месяц только на первое число
+          num.textContent = String(day);
+          if (day === 1) monthEl.textContent = monthShort;
+        } else {
+          // Отдалённый вид: числа по неделям, месяц только на первое число
+          if (day === 1 || dow === 1) {
+            // понедельники + всегда 1-е
+            num.textContent = String(day);
+          } else {
+            num.textContent = "";
+          }
+
+          if (day === 1) {
+            monthEl.textContent = monthShort;
+          }
+        }
+      } else {
+        // Режим "месяц": только числа, без подписи месяца
+        num.textContent = String(d.getDate());
+        // monthEl намеренно оставляем пустым
+      }
+
+      dayEl.appendChild(num);
+
+      // Если есть текст месяца — добавляем, и в годовом, и в месячном режиме
+      if (monthEl.textContent) {
+        dayEl.appendChild(monthEl);
+      }
+
+      ganttHeaderRowEl.appendChild(dayEl);
+    });
 
     const visibleEvents = eventsFromTable
       .filter(ev => {
