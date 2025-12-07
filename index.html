@@ -19,7 +19,7 @@
       --disc-efootball: #6fbe8c;
       --disc-lol: #f97316;
       --disc-football: #22d3ee;
-      --disc-projectd: #b7ff00; 
+      --disc-projectd: #b7ff00;
       --disc-other: #f59e0b;
 
       --gantt-day-width: 26px;
@@ -781,6 +781,87 @@
       line-height: 1.4;
     }
 
+    /* === Модалка логина === */
+
+    .login-modal { position: fixed; inset: 0; z-index: 85; display: none; }
+    .login-modal--open { display: block; }
+
+    .login-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15,23,42,0.85);
+      backdrop-filter: blur(14px);
+    }
+
+    .login-modal-dialog {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      width: min(360px, 100% - 32px);
+      background: radial-gradient(circle at top,#020617 0,#020617 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.7);
+      box-shadow: 0 24px 70px rgba(0,0,0,0.85);
+      padding: 14px 18px 14px;
+      font-size: 13px;
+    }
+
+    .login-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .login-modal-title { font-weight: 600; font-size: 14px; }
+
+    .login-modal-close {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .login-form-grid { display: flex; flex-direction: column; gap: 8px; }
+
+    .login-field-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .login-input {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.45);
+      background: rgba(15,23,42,0.95);
+      color: var(--text-main);
+      padding: 6px 10px;
+      font-size: 12px;
+      outline: none;
+    }
+    .login-input:focus { border-color: rgba(248,250,252,0.9); }
+
+    .login-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .login-modal-error {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #fecaca;
+      min-height: 14px;
+      line-height: 1.4;
+    }
+
     @media (max-width:900px){
       body { padding: 12px; }
     }
@@ -803,7 +884,7 @@
       </div>
     </div>
     <div class="app-header-right">
-      <button class="btn" id="addEventBtn">Добавить событие</button>
+      <button class="btn" id="adminActionBtn">Вход в админку</button>
     </div>
   </header>
 
@@ -906,6 +987,7 @@
   </section>
 </div>
 
+<!-- Модалка события -->
 <div class="event-modal" id="eventModal">
   <div class="event-modal-backdrop" id="eventModalBackdrop"></div>
   <div class="event-modal-dialog">
@@ -969,12 +1051,38 @@
   </div>
 </div>
 
+<!-- Модалка логина -->
+<div class="login-modal" id="loginModal">
+  <div class="login-modal-backdrop" id="loginModalBackdrop"></div>
+  <div class="login-modal-dialog">
+    <div class="login-modal-header">
+      <div class="login-modal-title">Вход в админку</div>
+      <button class="login-modal-close" type="button" id="loginClose">×</button>
+    </div>
+    <form id="loginForm">
+      <div class="login-form-grid">
+        <div>
+          <div class="login-field-label">Логин</div>
+          <input type="text" id="loginUsername" class="login-input" autocomplete="username" />
+        </div>
+        <div>
+          <div class="login-field-label">Пароль</div>
+          <input type="password" id="loginPassword" class="login-input" autocomplete="current-password" />
+        </div>
+      </div>
+
+      <div class="login-modal-footer">
+        <button type="button" class="btn btn-secondary" id="loginCancel">Отмена</button>
+        <button type="submit" class="btn" id="loginSubmit">Войти</button>
+      </div>
+
+      <div class="login-modal-error" id="loginModalError"></div>
+    </form>
+  </div>
+</div>
+
 <script>
-  const SHEET_CSV_RAW =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTKBQ5iF61LvjzwB1f0CjRRfmNshvsMNa9Nh0aWGhTU4lrcPrj59lxcdwrtTvo2xk-NYJzPtP_NRugC/pub?output=csv&gid=0";
-
-  const CORS_PROXY = "https://corsproxy.io/?";
-
+  // === URL веб-аппа Apps Script (doGet/doPost) ===
   const SHEET_API_URL =
     "https://script.google.com/macros/s/AKfycbwsJfeVy1umIemb6_VyxuOYd-KaH5chczuNq4n_uvXtKRQ6OBPeqyHTTGnwCqXIMxE0tA/exec";
 
@@ -1027,81 +1135,17 @@
     return "disc-other";
   }
 
-  function parseCsv(text) {
-    const rows = [];
-    let row = [];
-    let value = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-
-      if (inQuotes) {
-        if (ch === '"') {
-          if (text[i + 1] === '"') {
-            value += '"'; i++;
-          } else {
-            inQuotes = false;
-          }
-        } else {
-          value += ch;
-        }
-      } else {
-        if (ch === '"') {
-          inQuotes = true;
-        } else if (ch === ",") {
-          row.push(value); value = "";
-        } else if (ch === "\n" || ch === "\r") {
-          if (value !== "" || row.length > 0) {
-            row.push(value);
-            rows.push(row);
-            row = [];
-            value = "";
-          }
-        } else {
-          value += ch;
-        }
-      }
-    }
-    if (value !== "" || row.length > 0) {
-      row.push(value);
-      rows.push(row);
-    }
-    return rows;
-  }
-
-  function normalizeDate(value) {
-    if (!value) return "";
-    const v = value.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-    const m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (m) {
-      const d = m[1].padStart(2,"0");
-      const mo = m[2].padStart(2,"0");
-      return `${m[3]}-${mo}-${d}`;
-    }
-    return v;
-  }
-
+  // === Загрузка событий с бэка (GET, публично) ===
   async function loadEventsFromSheet() {
     try {
-      const url = SHEET_API_URL + "?mode=events&t=" + Date.now();
-      const res = await fetch(CORS_PROXY + encodeURIComponent(url));
+      const url = SHEET_API_URL + "?t=" + Date.now();
+      const res = await fetch(url);
       const text = await res.text();
-
-      let raw = text.trim();
-      if (raw.startsWith("<")) {
-        const m = raw.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
-        if (m && m[1]) {
-          raw = m[1].trim();
-        }
-      }
-
       let data;
       try {
-        data = JSON.parse(raw);
+        data = JSON.parse(text);
       } catch (err) {
-        console.error("Не получилось распарсить JSON от Apps Script:", err, raw);
+        console.error("Не получилось распарсить JSON от Apps Script:", err, text);
         return;
       }
 
@@ -1155,10 +1199,9 @@
   const prevMonthBtn  = document.getElementById("prevMonthBtn");
   const nextMonthBtn  = document.getElementById("nextMonthBtn");
   const zoomControlsEl = document.querySelector(".zoom-controls");
-  const addEventBtn = document.getElementById("addEventBtn");
+  const adminActionBtn = document.getElementById("adminActionBtn");
   const zoomInBtn  = document.getElementById("zoomInBtn");
   const zoomOutBtn = document.getElementById("zoomOutBtn");
-
 
   const eventModalErrorEl = document.getElementById("eventModalError");
   function setEventModalError(message) {
@@ -1192,6 +1235,7 @@
     document.documentElement.style.setProperty("--gantt-day-width", ganttDayWidth + "px");
   }
 
+  // === Модалка события ===
   const eventModalEl        = document.getElementById("eventModal");
   const eventModalBackdrop  = document.getElementById("eventModalBackdrop");
   const eventModalTitleEl   = document.getElementById("eventModalTitle");
@@ -1250,21 +1294,144 @@
   eventCloseBtn.addEventListener("click", closeEventModal);
   eventModalBackdrop.addEventListener("click", closeEventModal);
 
-  async function syncEventWithSheet(payload) {
+  // === Модалка логина ===
+  const loginModalEl       = document.getElementById("loginModal");
+  const loginModalBackdrop = document.getElementById("loginModalBackdrop");
+  const loginCloseBtn      = document.getElementById("loginClose");
+  const loginCancelBtn     = document.getElementById("loginCancel");
+  const loginFormEl        = document.getElementById("loginForm");
+  const loginUsernameInput = document.getElementById("loginUsername");
+  const loginPasswordInput = document.getElementById("loginPassword");
+  const loginSubmitBtn     = document.getElementById("loginSubmit");
+  const loginErrorEl       = document.getElementById("loginModalError");
+
+  function setLoginError(msg) {
+    loginErrorEl.textContent = msg || "";
+  }
+
+  function openLoginModal(initialError) {
+    if (initialError) setLoginError(initialError); else setLoginError("");
+    loginModalEl.classList.add("login-modal--open");
+    loginUsernameInput.focus();
+  }
+
+  function closeLoginModal() {
+    loginModalEl.classList.remove("login-modal--open");
+    setLoginError("");
+    loginPasswordInput.value = "";
+  }
+
+  loginModalBackdrop.addEventListener("click", closeLoginModal);
+  loginCloseBtn.addEventListener("click", closeLoginModal);
+  loginCancelBtn.addEventListener("click", closeLoginModal);
+
+  // === Аутентификация на фронте ===
+  let authToken = localStorage.getItem("calendarAuthToken") || null;
+  let isAdmin = !!authToken;
+
+  function updateAdminUI() {
+    if (!adminActionBtn) return;
+    if (isAdmin) {
+      adminActionBtn.textContent = "Добавить событие";
+    } else {
+      adminActionBtn.textContent = "Вход в админку";
+    }
+  }
+
+  function handleUnauthorized() {
+    authToken = null;
+    isAdmin = false;
+    localStorage.removeItem("calendarAuthToken");
+    updateAdminUI();
+    openLoginModal("Сессия истекла. Войдите заново.");
+  }
+
+  async function performLogin(login, password) {
+    const payload = {
+      action: "login",
+      login,
+      password
+    };
+    const res = await fetch(SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+    let data;
     try {
-      await fetch(SHEET_API_URL, {
+      data = JSON.parse(text);
+    } catch (err) {
+      throw new Error("Некорректный ответ сервера");
+    }
+    return data;
+  }
+
+  loginFormEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setLoginError("");
+
+    const login = loginUsernameInput.value.trim();
+    const password = loginPasswordInput.value.trim();
+
+    if (!login || !password) {
+      setLoginError("Введи логин и пароль.");
+      return;
+    }
+
+    loginSubmitBtn.disabled = true;
+    try {
+      const data = await performLogin(login, password);
+      if (!data.ok) {
+        setLoginError(data.error || "Неверный логин или пароль.");
+        return;
+      }
+      authToken = data.token;
+      isAdmin = true;
+      localStorage.setItem("calendarAuthToken", authToken);
+      updateAdminUI();
+      closeLoginModal();
+    } catch (err) {
+      setLoginError("Ошибка: " + err.message);
+    } finally {
+      loginSubmitBtn.disabled = false;
+    }
+  });
+
+  adminActionBtn.addEventListener("click", () => {
+    if (!isAdmin) {
+      openLoginModal();
+    } else {
+      openEventModal("create");
+    }
+  });
+
+  // === Синхронизация событий с бэком (create/update/delete, только для админа) ===
+  async function syncEventWithSheet(payloadBase) {
+    const payload = Object.assign({}, payloadBase, {
+      token: authToken || undefined
+    });
+    try {
+      const res = await fetch(SHEET_API_URL, {
         method: "POST",
-        mode: "no-cors",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
       });
-      return { ok: true };
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        return { ok: false, error: "Некорректный ответ сервера" };
+      }
+
+      if (!data.ok && data.error === "UNAUTHORIZED") {
+        handleUnauthorized();
+      }
+
+      return data;
     } catch (err) {
-      return {
-        ok: false,
-        error: "Не удалось обратиться к веб-аппу: " +
-               (err && err.message ? err.message : String(err))
-      };
+      return { ok: false, error: "Ошибка сети: " + (err && err.message ? err.message : String(err)) };
     }
   }
 
@@ -1334,8 +1501,6 @@
     closeEventModal();
   });
 
-  addEventBtn.addEventListener("click", ()=>openEventModal("create"));
-
   let dayPopupOverlay = null;
   let lastSelectedCell = null;
 
@@ -1350,7 +1515,6 @@
     }
   }
 
-  /* тултип комментария в поп-апе дня */
   function showDayCommentTooltip(ev, itemEl, cardEl, tooltipEl) {
     if (!ev.comment || !ev.comment.trim()) return;
     tooltipEl.textContent = ev.comment;
@@ -1360,14 +1524,12 @@
     const cardRect = cardEl.getBoundingClientRect();
     const gap = 8;
 
-    // позиция относительно карточки
     let relTop = itemRect.top - cardRect.top;
     let relLeft = cardRect.width + gap;
 
     tooltipEl.style.left = relLeft + "px";
     tooltipEl.style.top  = relTop + "px";
 
-    // корректируем, если вылезает за экран
     requestAnimationFrame(() => {
       const ttRect = tooltipEl.getBoundingClientRect();
       let left = relLeft;
@@ -1424,7 +1586,6 @@
 
     const list = card.querySelector(".day-popup-list");
 
-    // тултип для комментариев
     const commentTooltip = document.createElement("div");
     commentTooltip.className = "day-popup-comment";
     card.appendChild(commentTooltip);
@@ -1560,8 +1721,6 @@
       dayCells.push(cell);
     }
 
-    // сначала растягиваем календарь по высоте,
-    // потом считаем позиции полос ивентов
     adjustCalendarRowHeightDynamic();
     renderEventsOnCalendar(gridDates,dayCells);
 
@@ -1656,12 +1815,12 @@
     const cellWidth  = sampleRect.width;
     const cellHeight = sampleRect.height;
 
-    const BASE_CELL_HEIGHT = calendarBaseRowHeight; // 88
+    const BASE_CELL_HEIGHT = calendarBaseRowHeight;
     const factor = Math.max(1, cellHeight / BASE_CELL_HEIGHT);
 
-    const baseOffset = 24;                           // от верхнего края недели
-    const slotHeight = Math.floor(14 * factor);      // расстояние между полосами
-    const barHeight  = Math.floor(12 * factor);      // высота самой полосы
+    const baseOffset = 24;
+    const slotHeight = Math.floor(14 * factor);
+    const barHeight  = Math.floor(12 * factor);
     
     const horizontalPadding = 4;
     const MAX_SLOTS_PER_WEEK = 4;
@@ -1722,6 +1881,7 @@
         bar.addEventListener("mouseleave",hideTooltip);
 
         bar.addEventListener("contextmenu",e=>{
+          if (!isAdmin) return;
           e.preventDefault();
           openEventModal("edit", ev);
         });
@@ -1776,186 +1936,181 @@
   }
 
   function renderGantt(firstOfMonth, lastOfMonth){
-  ganttHeaderRowEl.innerHTML = "";
-  ganttBodyEl.innerHTML = "";
+    ganttHeaderRowEl.innerHTML = "";
+    ganttBodyEl.innerHTML = "";
 
-  let rangeStart, rangeEnd;
-  if (ganttRangeMode === "year") {
-    rangeStart = new Date(currentYear, 0, 1);
-    rangeEnd   = new Date(currentYear, 11, 31);
-  } else {
-    rangeStart = firstOfMonth;
-    rangeEnd   = lastOfMonth;
-  }
-
-  // Строим массив дней + строковые даты БЕЗ таймзоны
-  const ganttDays = [];
-  const ganttDayIsos = [];
-  for (let d = new Date(rangeStart); d <= rangeEnd; d = addDays(d, 1)) {
-    const copy = new Date(d);
-    ganttDays.push(copy);
-    ganttDayIsos.push(dateToIsoLocal(copy));
-  }
-
-  const daysCount = ganttDays.length;
-  currentGanttDaysCount = daysCount;
-
-  const totalWidth = daysCount * ganttDayWidth;
-  const templateCols = `repeat(${daysCount}, var(--gantt-day-width))`;
-  ganttHeaderRowEl.style.gridTemplateColumns = templateCols;
-
-  const isYearMode = ganttRangeMode === "year";
-  const showDenseDays = isYearMode && ganttDayWidth >= 22;
-
-  const weekendIndices = [];
-  ganttDays.forEach((d, idx) => {
-    const dow = d.getDay();
-    if (dow === 0 || dow === 6) weekendIndices.push(idx);
-  });
-
-  // Шапка
-  ganttDays.forEach((d) => {
-    const dayEl = document.createElement("div");
-    dayEl.className = "gantt-header-day";
-    if (sameDate(d, today)) dayEl.classList.add("is-today");
-
-    const dow = d.getDay();
-    if ((dow === 0 || dow === 6) && (!isYearMode || showDenseDays)) {
-      dayEl.classList.add("weekend");
-    }
-
-    const num = document.createElement("div");
-    num.className = "gantt-header-day-number";
-    const monthShort = d.toLocaleDateString("ru-RU", { month: "short" });
-    const monthEl = document.createElement("div");
-    monthEl.className = "gantt-header-day-month";
-
-    if (isYearMode) {
-      if (showDenseDays) {
-        num.textContent = String(d.getDate());
-        if (d.getDate() === 1) monthEl.textContent = monthShort;
-      } else {
-        const day = d.getDate();
-        if (day === 1) {
-          num.textContent = monthShort;
-        } else if ([7, 14, 21, 28].includes(day)) {
-          num.textContent = String(day);
-        } else {
-          num.textContent = "";
-        }
-      }
+    let rangeStart, rangeEnd;
+    if (ganttRangeMode === "year") {
+      rangeStart = new Date(currentYear, 0, 1);
+      rangeEnd   = new Date(currentYear, 11, 31);
     } else {
-      num.textContent = String(d.getDate());
-      monthEl.textContent = monthShort;
+      rangeStart = firstOfMonth;
+      rangeEnd   = lastOfMonth;
     }
 
-    dayEl.appendChild(num);
-    if (!isYearMode || showDenseDays) {
-      if (monthEl.textContent) dayEl.appendChild(monthEl);
+    const ganttDays = [];
+    const ganttDayIsos = [];
+    for (let d = new Date(rangeStart); d <= rangeEnd; d = addDays(d, 1)) {
+      const copy = new Date(d);
+      ganttDays.push(copy);
+      ganttDayIsos.push(dateToIsoLocal(copy));
     }
 
-    ganttHeaderRowEl.appendChild(dayEl);
-  });
+    const daysCount = ganttDays.length;
+    currentGanttDaysCount = daysCount;
 
-  // Фильтруем события как раньше
-  const visibleEvents = eventsFromTable
-    .filter(ev => {
-      const key = normalizeDiscipline(ev.discipline);
-      if (!activeDisciplines.has(key)) return false;
-      const start = parseISODate(ev.startDate);
-      const end   = parseISODate(ev.endDate);
-      return !(end < rangeStart || start > rangeEnd);
-    })
-    .sort((a, b) => parseISODate(a.startDate) - parseISODate(b.startDate));
+    const totalWidth = daysCount * ganttDayWidth;
+    const templateCols = `repeat(${daysCount}, var(--gantt-day-width))`;
+    ganttHeaderRowEl.style.gridTemplateColumns = templateCols;
 
-  if (visibleEvents.length === 0) {
-    const line = document.createElement("div");
-    line.className = "gantt-line";
+    const isYearMode = ganttRangeMode === "year";
+    const showDenseDays = isYearMode && ganttDayWidth >= 22;
 
-    const left = document.createElement("div");
-    left.className = "gantt-line-left";
-    left.textContent = "Нет событий в этом диапазоне";
+    const weekendIndices = [];
+    ganttDays.forEach((d, idx) => {
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) weekendIndices.push(idx);
+    });
 
-    const right = document.createElement("div");
-    right.className = "gantt-line-right";
-    right.style.width = `${totalWidth}px`;
+    ganttDays.forEach((d) => {
+      const dayEl = document.createElement("div");
+      dayEl.className = "gantt-header-day";
+      if (sameDate(d, today)) dayEl.classList.add("is-today");
 
-    line.appendChild(left);
-    line.appendChild(right);
-    ganttBodyEl.appendChild(line);
-    return;
+      const dow = d.getDay();
+      if ((dow === 0 || dow === 6) && (!isYearMode || showDenseDays)) {
+        dayEl.classList.add("weekend");
+      }
+
+      const num = document.createElement("div");
+      num.className = "gantt-header-day-number";
+      const monthShort = d.toLocaleDateString("ru-RU", { month: "short" });
+      const monthEl = document.createElement("div");
+      monthEl.className = "gantt-header-day-month";
+
+      if (isYearMode) {
+        if (showDenseDays) {
+          num.textContent = String(d.getDate());
+          if (d.getDate() === 1) monthEl.textContent = monthShort;
+        } else {
+          const day = d.getDate();
+          if (day === 1) {
+            num.textContent = monthShort;
+          } else if ([7, 14, 21, 28].includes(day)) {
+            num.textContent = String(day);
+          } else {
+            num.textContent = "";
+          }
+        }
+      } else {
+        num.textContent = String(d.getDate());
+        monthEl.textContent = monthShort;
+      }
+
+      dayEl.appendChild(num);
+      if (!isYearMode || showDenseDays) {
+        if (monthEl.textContent) dayEl.appendChild(monthEl);
+      }
+
+      ganttHeaderRowEl.appendChild(dayEl);
+    });
+
+    const visibleEvents = eventsFromTable
+      .filter(ev => {
+        const key = normalizeDiscipline(ev.discipline);
+        if (!activeDisciplines.has(key)) return false;
+        const start = parseISODate(ev.startDate);
+        const end   = parseISODate(ev.endDate);
+        return !(end < rangeStart || start > rangeEnd);
+      })
+      .sort((a, b) => parseISODate(a.startDate) - parseISODate(b.startDate));
+
+    if (visibleEvents.length === 0) {
+      const line = document.createElement("div");
+      line.className = "gantt-line";
+
+      const left = document.createElement("div");
+      left.className = "gantt-line-left";
+      left.textContent = "Нет событий в этом диапазоне";
+
+      const right = document.createElement("div");
+      right.className = "gantt-line-right";
+      right.style.width = `${totalWidth}px`;
+
+      line.appendChild(left);
+      line.appendChild(right);
+      ganttBodyEl.appendChild(line);
+      return;
+    }
+
+    const weekendIndicesLocal = weekendIndices;
+
+    visibleEvents.forEach(ev => {
+      const line = document.createElement("div");
+      line.className = "gantt-line";
+
+      const left = document.createElement("div");
+      left.className = "gantt-line-left";
+      const leftText = document.createElement("span");
+      leftText.className = "gantt-line-left-text";
+      leftText.textContent = ev.title;
+      left.appendChild(leftText);
+
+      const right = document.createElement("div");
+      right.className = "gantt-line-right";
+      right.style.width = `${totalWidth}px`;
+
+      weekendIndicesLocal.forEach(idx => {
+        const stripe = document.createElement("div");
+        stripe.className = "gantt-weekend-stripe";
+        stripe.style.left = `${idx * ganttDayWidth}px`;
+        right.appendChild(stripe);
+      });
+
+      const discClass = disciplineToClassName(ev.discipline);
+
+      let startIdx = ganttDayIsos.indexOf(ev.startDate);
+      let endIdx   = ganttDayIsos.indexOf(ev.endDate);
+
+      if (startIdx === -1) startIdx = 0;
+      if (endIdx   === -1) endIdx   = daysCount - 1;
+      if (endIdx < startIdx) endIdx = startIdx;
+
+      const spanDays = Math.max(1, endIdx - startIdx + 1);
+
+      const bar = document.createElement("div");
+      bar.className = `gantt-bar ${discClass}`;
+      bar.style.left  = `${startIdx * ganttDayWidth}px`;
+      bar.style.width = `${spanDays * ganttDayWidth}px`;
+      bar.dataset.start = ev.startDate;
+      bar.dataset.end   = ev.endDate;
+      bar.dataset.title = ev.title;
+      bar.textContent = ev.title;
+
+      bar.addEventListener("mouseenter", e => {
+        const s  = formatTooltipDate(bar.dataset.start);
+        const en = formatTooltipDate(bar.dataset.end);
+        const dates = `${s} — ${en}`;
+        showTooltip(bar.dataset.title, dates, e.clientX, e.clientY);
+      });
+      bar.addEventListener("mousemove", e => moveTooltip(e.clientX, e.clientY));
+      bar.addEventListener("mouseleave", hideTooltip);
+
+      bar.addEventListener("contextmenu", e => {
+        if (!isAdmin) return;
+        e.preventDefault();
+        openEventModal("edit", ev);
+      });
+
+      right.appendChild(bar);
+      line.appendChild(left);
+      line.appendChild(right);
+      ganttBodyEl.appendChild(line);
+    });
+
+    requestAnimationFrame(adjustGanttRowHeightDynamic);
   }
 
-  // Строки
-  visibleEvents.forEach(ev => {
-    const line = document.createElement("div");
-    line.className = "gantt-line";
-
-    const left = document.createElement("div");
-    left.className = "gantt-line-left";
-    const leftText = document.createElement("span");
-    leftText.className = "gantt-line-left-text";
-    leftText.textContent = ev.title;
-    left.appendChild(leftText);
-
-    const right = document.createElement("div");
-    right.className = "gantt-line-right";
-    right.style.width = `${totalWidth}px`;
-
-    // выходные
-    weekendIndices.forEach(idx => {
-      const stripe = document.createElement("div");
-      stripe.className = "gantt-weekend-stripe";
-      stripe.style.left = `${idx * ganttDayWidth}px`;
-      right.appendChild(stripe);
-    });
-
-    const discClass = disciplineToClassName(ev.discipline);
-
-    // индексы начала/конца по строковым датам
-    let startIdx = ganttDayIsos.indexOf(ev.startDate);
-    let endIdx   = ganttDayIsos.indexOf(ev.endDate);
-
-    if (startIdx === -1) startIdx = 0;                    // если началась до диапазона
-    if (endIdx   === -1) endIdx   = daysCount - 1;        // если закончилась после
-    if (endIdx < startIdx) endIdx = startIdx;
-
-    const spanDays = Math.max(1, endIdx - startIdx + 1);
-
-    const bar = document.createElement("div");
-    bar.className = `gantt-bar ${discClass}`;
-    bar.style.left  = `${startIdx * ganttDayWidth}px`;
-    bar.style.width = `${spanDays * ganttDayWidth}px`;
-    bar.dataset.start = ev.startDate;
-    bar.dataset.end   = ev.endDate;
-    bar.dataset.title = ev.title;
-    bar.textContent = ev.title;
-
-    bar.addEventListener("mouseenter", e => {
-      const s  = formatTooltipDate(bar.dataset.start);
-      const en = formatTooltipDate(bar.dataset.end);
-      const dates = `${s} — ${en}`;
-      showTooltip(bar.dataset.title, dates, e.clientX, e.clientY);
-    });
-    bar.addEventListener("mousemove", e => moveTooltip(e.clientX, e.clientY));
-    bar.addEventListener("mouseleave", hideTooltip);
-
-    bar.addEventListener("contextmenu", e => {
-      e.preventDefault();
-      openEventModal("edit", ev);
-    });
-
-    right.appendChild(bar);
-    line.appendChild(left);
-    line.appendChild(right);
-    ganttBodyEl.appendChild(line);
-  });
-
-  // после перерисовки — подогнать высоту строк
-  requestAnimationFrame(adjustGanttRowHeightDynamic);
-}
-
-  /* === ДИНАМИЧЕСКАЯ ВЫСОТА СТРОК ГАНТА === */
   function adjustGanttRowHeightDynamic() {
     const BASE = 22;
     const MAX = BASE * 3;
@@ -1989,7 +2144,6 @@
     document.documentElement.style.setProperty("--gantt-row-height", candidate + "px");
   }
 
-  /* === ДИНАМИЧЕСКАЯ ВЫСОТА СТРОК КАЛЕНДАРЯ === */
   function adjustCalendarRowHeightDynamic() {
     if (currentView !== "calendar") return;
 
@@ -2286,6 +2440,8 @@
     }
   });
 
+  // старт
+  updateAdminUI();
   applyGanttDayWidth();
   loadEventsFromSheet();
 </script>
