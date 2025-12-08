@@ -571,14 +571,14 @@
     }
 
     .gantt-header {
-      display: grid;
-      grid-template-columns: var(--sidebar-width-current) 1fr;
-      position: sticky;
-      top: 0;
-      z-index: 4;
-      background: rgba(15,23,42,0.97);
-      border-bottom: 1px solid rgba(148,163,184,0.35);
-    }
+  display: grid;
+  grid-template-columns: var(--sidebar-width-current) 1fr;
+  position: sticky;
+  top: 0;
+  z-index: 20; /* было 4 — поднимем повыше, чтобы точно быть над телом */
+  background: #020617; /* полностью непрозрачный фон */
+  border-bottom: 1px solid rgba(148,163,184,0.35);
+}
 
     .gantt-header-left {
       display: flex;
@@ -622,27 +622,33 @@
     }
 
     .gantt-header-right {
-      display: grid;
-      padding: 3px 0 2px;
-      font-size: 10px;
-      color: var(--text-muted);
-      background: rgba(15,23,42,0.96);
-      backdrop-filter: blur(14px);
-    }
+  display: grid;
+  padding: 3px 0 2px;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: #050d2e;        /* тоже непрозрачный фон */
+  /* backdrop-filter можно убрать, чтобы ничего из-под него не "просвечивало" */
+  /* backdrop-filter: blur(14px);  <- этот можно смело удалить, если хочешь */
+}
 
     .gantt-header-day {
-      text-align: center;
-      width: var(--gantt-day-width);
-    }
+  text-align: center;
+  width: var(--gantt-day-width);
+  display: flex;              /* NEW */
+  flex-direction: column;     /* NEW */
+  /*align-items: center;        /* NEW */
+  padding-top: 2px;           /* опционально, чуть воздуха сверху */
+  padding-bottom: 0px;        /* опционально, чуть воздуха снизу */
+}
     .gantt-header-day-number { font-size: 11px; }
-    .gantt-header-day-month  { font-size: 9px; text-transform: uppercase; opacity: .7; }
+    .gantt-header-day-month  { font-size: 11px; opacity: 0.9; }
 
     .gantt-header-day.is-today .gantt-header-day-number {
       color: var(--accent);
       font-weight: 600;
     }
 
-    .gantt-header-day.weekend { background: rgba(15,23,42,0.9); }
+    /* .gantt-header-day.weekend { background: rgba(15,23,42,0.9); } */
 
     .gantt-line {
       display: grid;
